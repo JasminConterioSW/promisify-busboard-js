@@ -25,6 +25,9 @@ export default class ConsoleRunner {
         stopPoints.forEach(point => {
             console.log(point.commonName);
         });
+        if (stopPoints.length === 0) {
+            console.log("Sorry, no stop points found.");
+        }
     }
 
     buildUrl(url, endpoint, parameters) {
@@ -58,7 +61,7 @@ export default class ConsoleRunner {
                     if (!jsonBody) { reject("Failed to parse location"); }
                     resolve({ latitude: jsonBody.result.latitude, longitude: jsonBody.result.longitude });
                 })
-                .catch((err) => {reject(err)});
+                .catch((err) => {reject(`Unable to get location. Error: ${err}`)});
         })
     }
 
@@ -81,20 +84,21 @@ export default class ConsoleRunner {
                         }).slice(0, count);
                         resolve(stopPoints);
                     })
-                .catch(error => reject(error));
+                .catch(err => reject(`Unable to get stop points. Error: ${err}`));
         })
 
     }
 
-    run() {
-        const that = this;
-        that.promptForPostcode()
-            .then((postcode) => {
-                postcode = postcode.replace(/\s/g, '');
-                return that.getLocationForPostCode(postcode)
-            })
-            .then((location) => (that.getNearestStopPoints(location.latitude, location.longitude, 5)))
-            .then((stopPoints) => (that.displayStopPoints(stopPoints)))
-            .catch(error => console.log(error));
+    async run() {
+        try {
+            const that = this;
+            const userInput = await that.promptForPostcode();
+            const postcode = userInput.replace(/\s/g, '');
+            const location = await that.getLocationForPostCode(postcode);
+            const stopPoints = await that.getNearestStopPoints(location.latitude, location.longitude, 5);
+            that.displayStopPoints(stopPoints);
+        } catch (error) {
+            console.log(error)
+        }
     }
 }
