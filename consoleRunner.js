@@ -13,7 +13,7 @@ const TFL_BASE_URL = 'https://api.tfl.gov.uk';
 export default class ConsoleRunner {
 
     promptForPostcode() {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             readline.question('\nEnter your postcode: ', function (postcode) {
                 readline.close();
                 resolve(postcode);
@@ -34,30 +34,31 @@ export default class ConsoleRunner {
     }
 
     makeGetRequest(baseUrl, endpoint, parameters) {
+        const url = this.buildUrl(baseUrl, endpoint, parameters);
         return new Promise((resolve, reject) => {
-            const url = this.buildUrl(baseUrl, endpoint, parameters);
-
             request.get(url, (err, response, body) => {
                 if (err) {
                     console.log(err)
                     reject(err);
-                } else if (response.statusCode !== 200) {
-                    console.log(response.statusCode);
-                } else {
-                    resolve(body);
                 }
+                if (response.statusCode !== 200) {
+                    console.log(response.statusCode);
+                    reject(response.statusCode);
+                }
+                resolve(body);
             });
         })
-
     }
 
     getLocationForPostCode(postcode) {
         return new Promise((resolve, reject) => {
             this.makeGetRequest(POSTCODES_BASE_URL, `postcodes/${postcode}`, [])
                 .then((responseBody) => {
-                const jsonBody = JSON.parse(responseBody);
-                resolve({ latitude: jsonBody.result.latitude, longitude: jsonBody.result.longitude });
-            });
+                    const jsonBody = JSON.parse(responseBody);
+                    if (!jsonBody) { reject("Failed to parse location"); }
+                    resolve({ latitude: jsonBody.result.latitude, longitude: jsonBody.result.longitude });
+                })
+                .catch((err) => {reject(err)});
         })
     }
 
@@ -73,14 +74,14 @@ export default class ConsoleRunner {
                     {name: 'radius', value: 1000},
                     {name: 'app_id', value: '' /* Enter your app id here */},
                     {name: 'app_key', value: '' /* Enter your app key here */}
-                ]
-            )
+                ])
                 .then((responseBody) => {
                         const stopPoints = JSON.parse(responseBody).stopPoints.map(function(entity) {
                             return { naptanId: entity.naptanId, commonName: entity.commonName };
                         }).slice(0, count);
                         resolve(stopPoints);
-                    });
+                    })
+                .catch(error => reject(error));
         })
 
     }
@@ -93,6 +94,7 @@ export default class ConsoleRunner {
                 return that.getLocationForPostCode(postcode)
             })
             .then((location) => (that.getNearestStopPoints(location.latitude, location.longitude, 5)))
-            .then((stopPoints) => (that.displayStopPoints(stopPoints)));
+            .then((stopPoints) => (that.displayStopPoints(stopPoints)))
+            .catch(error => console.log(error));
     }
 }
