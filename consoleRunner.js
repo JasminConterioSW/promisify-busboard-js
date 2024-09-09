@@ -25,6 +25,9 @@ export default class ConsoleRunner {
         stopPoints.forEach(point => {
             console.log(point.commonName);
         });
+        if (stopPoints.length === 0) {
+            console.log("Sorry, no stop points found.");
+        }
     }
 
     buildUrl(url, endpoint, parameters) {
@@ -58,7 +61,7 @@ export default class ConsoleRunner {
                     if (!jsonBody) { reject("Failed to parse location"); }
                     resolve({ latitude: jsonBody.result.latitude, longitude: jsonBody.result.longitude });
                 })
-                .catch((err) => {reject(err)});
+                .catch((err) => {reject(`Unable to get location. Error: ${err}`)});
         })
     }
 
@@ -81,7 +84,7 @@ export default class ConsoleRunner {
                         }).slice(0, count);
                         resolve(stopPoints);
                     })
-                .catch(error => reject(error));
+                .catch(err => reject(`Unable to get stop points. Error: ${err}`));
         })
 
     }
